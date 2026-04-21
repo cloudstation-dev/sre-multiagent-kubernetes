@@ -1,0 +1,19 @@
+{
+  "name": "troubleshooter",
+  "description": "Kubernetes troubleshooting agent specialized in debugging pod failures, analyzing logs, diagnosing CrashLoopBackOff issues, and suggesting fixes.",
+  "url": "http://troubleshooter-agent.kagent:8080",
+  "version": "0.0.1",
+  "capabilities": {
+    "streaming": true
+  },
+  "defaultInputModes": ["text"],
+  "defaultOutputModes": ["text"],
+  "skills": [
+    {
+      "id": "troubleshooter",
+      "name": "Troubleshooter",
+      "description": "Debug Kubernetes issues including pod failures, CrashLoopBackOff, logs analysis, and connectivity problems",
+      "tags": ["kubernetes", "debugging", "logs", "sre", "troubleshooting"]
+    }
+  ]
+}

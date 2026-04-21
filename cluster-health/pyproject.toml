@@ -1,0 +1,9 @@
+[project]
+name = "cluster-health"
+version = "0.1"
+description = "Kubernetes cluster health monitoring agent"
+readme = "README.md"
+dependencies = [
+  "google-adk>=1.8.0",
+  "kubernetes>=31.0.0",
+]

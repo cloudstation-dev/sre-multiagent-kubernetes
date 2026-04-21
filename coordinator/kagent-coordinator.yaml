@@ -1,0 +1,28 @@
+# Coordinator Agent - orchestrates other agents via A2A
+# No K8s RBAC needed - only HTTP access to other agents
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: sre-coordinator
+  namespace: kagent
+spec:
+  description: |
+    SRE Coordinator that routes requests to specialized Kubernetes agents.
+    Delegates to Cluster Health Agent for monitoring and Troubleshooter Agent
+    for debugging issues via A2A protocol.
+  type: BYO
+  byo:
+    deployment:
+      image: ghcr.io/YOUR_ORG/sre-coordinator:latest
+      env:
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kagent-google
+              key: GOOGLE_API_KEY
+        # A2A agent URLs - these point to the other agents' services
+        - name: CLUSTER_HEALTH_AGENT_URL
+          value: "http://cluster-health-agent.kagent:8080/.well-known/agent-card.json"
+        - name: TROUBLESHOOTER_AGENT_URL
+          value: "http://troubleshooter-agent.kagent:8080/.well-known/agent-card.json"

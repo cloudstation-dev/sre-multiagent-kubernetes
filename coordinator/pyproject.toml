@@ -1,0 +1,8 @@
+[project]
+name = "coordinator"
+version = "0.1"
+description = "SRE Coordinator agent that delegates to specialized agents via A2A"
+readme = "README.md"
+dependencies = [
+  "google-adk>=1.8.0",
+]

@@ -1,0 +1,149 @@
+# =============================================================================
+# SRE Multi-Agent System - Complete Deployment
+# =============================================================================
+# This file deploys all three agents and their RBAC configurations.
+#
+# Prerequisites:
+# 1. kagent is installed in the cluster
+# 2. Create the Google API key secret:
+#    kubectl create secret generic kagent-google \
+#      --from-literal=GOOGLE_API_KEY=your-key \
+#      -n kagent
+#
+# Deploy with:
+#    kubectl apply -f deploy-all.yaml
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# CLUSTER HEALTH AGENT
+# -----------------------------------------------------------------------------
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-health-agent-sa
+  namespace: kagent
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-health-agent-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "nodes", "events", "services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-health-agent-binding
+subjects:
+  - kind: ServiceAccount
+    name: cluster-health-agent-sa
+    namespace: kagent
+roleRef:
+  kind: ClusterRole
+  name: cluster-health-agent-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: cluster-health-agent
+  namespace: kagent
+spec:
+  description: "Kubernetes cluster health monitoring agent"
+  type: BYO
+  byo:
+    deployment:
+      image: glgelopfalcon/cluster-health-agent:v6
+      serviceAccountName: cluster-health-agent-sa
+      env:
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kagent-google
+              key: GOOGLE_API_KEY
+
+# -----------------------------------------------------------------------------
+# TROUBLESHOOTER AGENT
+# -----------------------------------------------------------------------------
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: troubleshooter-agent-sa
+  namespace: kagent
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: troubleshooter-agent-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "events", "services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: troubleshooter-agent-binding
+subjects:
+  - kind: ServiceAccount
+    name: troubleshooter-agent-sa
+    namespace: kagent
+roleRef:
+  kind: ClusterRole
+  name: troubleshooter-agent-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: troubleshooter-agent
+  namespace: kagent
+spec:
+  description: "Kubernetes troubleshooting and debugging agent"
+  type: BYO
+  byo:
+    deployment:
+      image: glgelopfalcon/troubleshooter-agent:v5
+      serviceAccountName: troubleshooter-agent-sa
+      env:
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kagent-google
+              key: GOOGLE_API_KEY
+
+# -----------------------------------------------------------------------------
+# SRE COORDINATOR AGENT
+# -----------------------------------------------------------------------------
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: sre-coordinator
+  namespace: kagent
+spec:
+  description: "SRE Coordinator - routes to specialized agents via A2A"
+  type: BYO
+  byo:
+    deployment:
+      image: glgelopfalcon/sre-coordinator:v7
+      env:
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kagent-google
+              key: GOOGLE_API_KEY
+        - name: CLUSTER_HEALTH_AGENT_URL
+          value: "http://cluster-health-agent.kagent:8080/.well-known/agent-card.json"
+        - name: TROUBLESHOOTER_AGENT_URL
+          value: "http://troubleshooter-agent.kagent:8080/.well-known/agent-card.json"

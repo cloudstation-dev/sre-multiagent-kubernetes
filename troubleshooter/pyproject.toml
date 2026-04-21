@@ -1,0 +1,9 @@
+[project]
+name = "troubleshooter"
+version = "0.1"
+description = "Kubernetes troubleshooting and debugging agent"
+readme = "README.md"
+dependencies = [
+  "google-adk>=1.8.0",
+  "kubernetes>=31.0.0",
+]

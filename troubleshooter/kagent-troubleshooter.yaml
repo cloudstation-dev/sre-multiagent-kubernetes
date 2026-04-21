@@ -1,0 +1,63 @@
+# RBAC for Troubleshooter Agent - needs read access plus logs
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: troubleshooter-agent-sa
+  namespace: kagent
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: troubleshooter-agent-role
+rules:
+  # Pods - read status, list, and logs
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+  # Events - read for debugging
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+  # Services - for connectivity checks
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: troubleshooter-agent-binding
+subjects:
+  - kind: ServiceAccount
+    name: troubleshooter-agent-sa
+    namespace: kagent
+roleRef:
+  kind: ClusterRole
+  name: troubleshooter-agent-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Agent Definition
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: troubleshooter-agent
+  namespace: kagent
+spec:
+  description: |
+    Kubernetes troubleshooting agent specialized in debugging pod failures,
+    analyzing logs, diagnosing CrashLoopBackOff issues, and suggesting fixes.
+  type: BYO
+  byo:
+    deployment:
+      image: ghcr.io/YOUR_ORG/troubleshooter-agent:latest
+      serviceAccountName: troubleshooter-agent-sa
+      env:
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kagent-google
+              key: GOOGLE_API_KEY

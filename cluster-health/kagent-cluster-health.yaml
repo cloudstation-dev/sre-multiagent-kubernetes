@@ -1,0 +1,68 @@
+# RBAC for Cluster Health Agent - needs read access to K8s resources
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-health-agent-sa
+  namespace: kagent
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-health-agent-role
+rules:
+  # Pods - read status and list
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  # Nodes - read status
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  # Events - read for debugging
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+  # Deployments - read status
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch"]
+  # Services - for connectivity checks
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-health-agent-binding
+subjects:
+  - kind: ServiceAccount
+    name: cluster-health-agent-sa
+    namespace: kagent
+roleRef:
+  kind: ClusterRole
+  name: cluster-health-agent-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Agent Definition
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: cluster-health-agent
+  namespace: kagent
+spec:
+  description: |
+    Kubernetes cluster health monitoring agent.
+    Can check pod status, node health, deployments, events, and resource usage.
+  type: BYO
+  byo:
+    deployment:
+      image: ghcr.io/YOUR_ORG/cluster-health-agent:latest
+      serviceAccountName: cluster-health-agent-sa
+      env:
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kagent-google
+              key: GOOGLE_API_KEY

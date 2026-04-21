@@ -1,0 +1,19 @@
+{
+  "name": "coordinator",
+  "description": "SRE Coordinator that routes requests to specialized Kubernetes agents. Can delegate to Cluster Health Agent for monitoring and Troubleshooter Agent for debugging issues.",
+  "url": "http://sre-coordinator.kagent:8080",
+  "version": "0.0.1",
+  "capabilities": {
+    "streaming": true
+  },
+  "defaultInputModes": ["text"],
+  "defaultOutputModes": ["text"],
+  "skills": [
+    {
+      "id": "coordinator",
+      "name": "SRE Coordinator",
+      "description": "Routes requests to specialized agents via A2A protocol for cluster health monitoring and troubleshooting",
+      "tags": ["kubernetes", "sre", "coordinator", "a2a"]
+    }
+  ]
+}
