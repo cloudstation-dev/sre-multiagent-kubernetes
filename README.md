@@ -51,37 +51,55 @@ A hands-on workshop to build and deploy a multi-agent SRE system using kagent an
 ## Prerequisites
 
 - [ ] Kubernetes cluster with kagent installed
+- [ ] Install ghcr.io/kagent-dev/kagent/kagent-adk:0.9.0-beta3
 - [ ] Docker to build images
 - [ ] kubectl configured for your cluster
 - [ ] Google Cloud account with Gemini API key
 
 ---
 
-## Step 1: Get Google API Key
+## Step 1 - Setup a k8s cluster using kind
+
+You need to have installed kind tool. 
+
+```
+kind create cluster --config kind-config.yaml --name <cluster-name>
+```
+
+After you can check the k8s control plane is running: `kubectl cluster-info --context kind-<cluster-name>`
+
+
+
+## Step 2: Get Google API Key
 
 1. Go to https://aistudio.google.com/apikey
 2. Click "Create API Key"
 3. Copy and save the key (you'll need it in Step 2)
-
+4. Run the command in your terminal: `export GOOGLE_API_KEY=<your_key>`
 ---
 
-## Step 2: Create the Secret in Kubernetes
+## Step 3: Install Kagent
 
-```bash
-kubectl create secret generic kagent-google \
-  --from-literal=GOOGLE_API_KEY=<YOUR_API_KEY> \
-  -n kagent
+```
+helm install kagent-crds oci://ghcr.io/kagent-dev/kagent/helm/kagent-crds \
+  --namespace kagent \
+  --create-namespace
 ```
 
-Verify the secret was created:
-
-```bash
-kubectl get secret kagent-google -n kagent
 ```
-
+helm install kagent oci://ghcr.io/kagent-dev/kagent/helm/kagent \
+  --namespace kagent \
+  --set providers.default=gemini \
+  --set providers.gemini.apiKey=$GOOGLE_API_KEY
+```
 ---
 
-## Step 3: Build the Docker Images
+
+## Step 4: Build the Docker Images
+
+Run the `docker pull ghcr.io/kagent-dev/kagent/kagent-adk:0.9.0-beta3`. 
+
+What is kagent-adk? It is the 'Agent Development Kit.' It is designed to facilitate the development and deployment of intelligent agents that interact directly with Kubernetes clusters.
 
 Navigate to the `sre-agents` directory and build each agent:
 
