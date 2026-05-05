@@ -1,5 +1,6 @@
-"""Kubernetes tools for cluster health monitoring."""
+"""Kubernetes tools for cluster health monitoring - CrewAI version."""
 
+from crewai.tools import tool
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
@@ -7,15 +8,13 @@ from kubernetes.client.rest import ApiException
 def _get_k8s_client() -> tuple[client.CoreV1Api, client.AppsV1Api]:
     """Initialize Kubernetes client with in-cluster or local config."""
     try:
-        # Try in-cluster config first (when running inside K8s)
         config.load_incluster_config()
     except config.ConfigException:
-        # Fall back to kubeconfig for local development
         config.load_kube_config()
-
     return client.CoreV1Api(), client.AppsV1Api()
 
 
+@tool
 def get_pods(namespace: str = "default") -> str:
     """Get all pods in a namespace with their status.
 
@@ -42,7 +41,6 @@ def get_pods(namespace: str = "default") -> str:
             name = pod.metadata.name
             phase = pod.status.phase
 
-            # Get container statuses
             container_statuses = []
             if pod.status.container_statuses:
                 for cs in pod.status.container_statuses:
@@ -59,6 +57,7 @@ def get_pods(namespace: str = "default") -> str:
         return f"Error fetching pods: {e.reason}"
 
 
+@tool
 def get_nodes() -> str:
     """Get all nodes in the cluster with their status and resource capacity.
 
@@ -76,17 +75,12 @@ def get_nodes() -> str:
         result = []
         for node in nodes.items:
             name = node.metadata.name
-
-            # Get node conditions
             conditions = {c.type: c.status for c in node.status.conditions}
             ready = conditions.get("Ready", "Unknown")
-
-            # Get capacity
             capacity = node.status.capacity
             cpu = capacity.get("cpu", "?")
             memory = capacity.get("memory", "?")
 
-            # Get node roles
             labels = node.metadata.labels or {}
             roles = [k.replace("node-role.kubernetes.io/", "")
                     for k in labels if k.startswith("node-role.kubernetes.io/")]
@@ -100,6 +94,7 @@ def get_nodes() -> str:
         return f"Error fetching nodes: {e.reason}"
 
 
+@tool
 def get_deployments(namespace: str = "default") -> str:
     """Get all deployments in a namespace with their replica status.
 
@@ -137,6 +132,7 @@ def get_deployments(namespace: str = "default") -> str:
         return f"Error fetching deployments: {e.reason}"
 
 
+@tool
 def get_events(namespace: str = "default", limit: int = 10) -> str:
     """Get recent events in a namespace, useful for debugging issues.
 
@@ -158,7 +154,6 @@ def get_events(namespace: str = "default", limit: int = 10) -> str:
         if not events.items:
             return f"No events found in namespace '{namespace}'."
 
-        # Sort by last timestamp (most recent first)
         sorted_events = sorted(
             events.items,
             key=lambda e: e.last_timestamp or e.event_time or e.metadata.creation_timestamp,
@@ -172,7 +167,7 @@ def get_events(namespace: str = "default", limit: int = 10) -> str:
             name = event.involved_object.name
             reason = event.reason
             message = event.message[:100] + "..." if len(event.message) > 100 else event.message
-            event_type = event.type  # Normal or Warning
+            event_type = event.type
 
             result.append(f"- [{event_type}] {ns}/{kind}/{name}: {reason} - {message}")
 
@@ -182,6 +177,7 @@ def get_events(namespace: str = "default", limit: int = 10) -> str:
         return f"Error fetching events: {e.reason}"
 
 
+@tool
 def get_resource_usage(namespace: str = "default") -> str:
     """Get resource requests and limits for pods in a namespace.
 
@@ -211,14 +207,9 @@ def get_resource_usage(namespace: str = "default") -> str:
             name = pod.metadata.name
 
             total_cpu_req = 0
-            total_mem_req = 0
-
             for container in pod.spec.containers:
                 if container.resources and container.resources.requests:
                     cpu_req = container.resources.requests.get("cpu", "0")
-                    mem_req = container.resources.requests.get("memory", "0")
-
-                    # Simple parsing (could be more robust)
                     if cpu_req.endswith("m"):
                         total_cpu_req += int(cpu_req[:-1])
                     elif cpu_req.isdigit():

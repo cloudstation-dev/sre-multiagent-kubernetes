@@ -13,61 +13,6 @@
 # Deploy with:
 #    kubectl apply -f deploy-all.yaml
 # =============================================================================
-
-# -----------------------------------------------------------------------------
-# CLUSTER HEALTH AGENT
-# -----------------------------------------------------------------------------
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: cluster-health-agent-sa
-  namespace: kagent
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: cluster-health-agent-role
-rules:
-  - apiGroups: [""]
-    resources: ["pods", "nodes", "events", "services"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["apps"]
-    resources: ["deployments"]
-    verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: cluster-health-agent-binding
-subjects:
-  - kind: ServiceAccount
-    name: cluster-health-agent-sa
-    namespace: kagent
-roleRef:
-  kind: ClusterRole
-  name: cluster-health-agent-role
-  apiGroup: rbac.authorization.k8s.io
----
-apiVersion: kagent.dev/v1alpha2
-kind: Agent
-metadata:
-  name: cluster-health-agent
-  namespace: kagent
-spec:
-  description: "Kubernetes cluster health monitoring agent"
-  type: BYO
-  byo:
-    deployment:
-      image: glgelopfalcon/cluster-health-agent:v6
-      serviceAccountName: cluster-health-agent-sa
-      env:
-        - name: GOOGLE_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: kagent-gemini
-              key: GOOGLE_API_KEY
-
 # -----------------------------------------------------------------------------
 # TROUBLESHOOTER AGENT
 # -----------------------------------------------------------------------------
@@ -119,7 +64,61 @@ spec:
         - name: GOOGLE_API_KEY
           valueFrom:
             secretKeyRef:
-              name: kagent-gemini
+              name: kagent-google
+              key: GOOGLE_API_KEY
+
+# -----------------------------------------------------------------------------
+# CLUSTER HEALTH CREW AGENT (CrewAI)
+# -----------------------------------------------------------------------------
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-health-crew-sa
+  namespace: kagent
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-health-crew-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "nodes", "events", "services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-health-crew-binding
+subjects:
+  - kind: ServiceAccount
+    name: cluster-health-crew-sa
+    namespace: kagent
+roleRef:
+  kind: ClusterRole
+  name: cluster-health-crew-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: cluster-health-crew
+  namespace: kagent
+spec:
+  description: "Kubernetes cluster health monitoring agent (CrewAI) - demonstrates A2A interoperability"
+  type: BYO
+  byo:
+    deployment:
+      image: glgelopfalcon/cluster-health-crew:v7
+      serviceAccountName: cluster-health-crew-sa
+      env:
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kagent-google
               key: GOOGLE_API_KEY
 
 # -----------------------------------------------------------------------------
@@ -136,14 +135,14 @@ spec:
   type: BYO
   byo:
     deployment:
-      image: glgelopfalcon/sre-coordinator:v7
+      image: glgelopfalcon/sre-coordinator:v10
       env:
         - name: GOOGLE_API_KEY
           valueFrom:
             secretKeyRef:
-              name: kagent-gemini
+              name: kagent-google
               key: GOOGLE_API_KEY
-        - name: CLUSTER_HEALTH_AGENT_URL
-          value: "http://cluster-health-agent.kagent:8080/.well-known/agent-card.json"
         - name: TROUBLESHOOTER_AGENT_URL
           value: "http://troubleshooter-agent.kagent:8080/.well-known/agent-card.json"
+        - name: CLUSTER_HEALTH_CREW_URL
+          value: "http://cluster-health-crew.kagent:8080/.well-known/agent-card.json"

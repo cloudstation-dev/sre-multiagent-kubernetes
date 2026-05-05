@@ -1,0 +1,20 @@
+{
+  "name": "cluster-health-crew",
+  "description": "Kubernetes cluster health monitoring agent built with CrewAI. Monitors pods, nodes, deployments, events, and resource usage.",
+  "url": "http://cluster-health-crew.kagent:8080",
+  "version": "0.1.0",
+  "capabilities": {
+    "streaming": true
+  },
+  "defaultInputModes": ["application/json", "text/plain"],
+  "defaultOutputModes": ["text"],
+  "skills": [
+    {
+      "id": "cluster-health-crew",
+      "name": "Cluster Health Crew",
+      "description": "Monitor Kubernetes cluster health including pods, nodes, deployments, events, and resource usage",
+      "example": "{\"input\": \"Check the health of pods in the kube-system namespace\"}",
+      "tags": ["kubernetes", "monitoring", "health", "crewai"]
+    }
+  ]
+}

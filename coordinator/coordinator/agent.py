@@ -12,13 +12,14 @@ from kagent.adk._remote_a2a_tool import KAgentRemoteA2AToolset, KAgentRemoteA2AT
 
 # Agent URLs - these are the K8s service URLs for the other agents
 # Format: http://<service-name>.<namespace>:<port>
-CLUSTER_HEALTH_URL = os.getenv(
-    "CLUSTER_HEALTH_AGENT_URL",
-    "http://cluster-health-agent.kagent:8080/.well-known/agent-card.json"
-)
+
 TROUBLESHOOTER_URL = os.getenv(
     "TROUBLESHOOTER_AGENT_URL",
     "http://troubleshooter-agent.kagent:8080/.well-known/agent-card.json"
+)
+CLUSTER_HEALTH_CREW_URL = os.getenv(
+    "CLUSTER_HEALTH_CREW_URL",
+    "http://cluster-health-crew.kagent:8080/.well-known/agent-card.json"
 )
 
 
@@ -73,16 +74,6 @@ class ResettableA2AToolset(KAgentRemoteA2AToolset):
 
 def create_coordinator_agent() -> Agent:
     """Factory function to create the coordinator agent with A2A toolsets."""
-    cluster_health_toolset = ResettableA2AToolset(
-        name="ask_cluster_health_agent",
-        description=(
-            "Delegates to the Cluster Health Agent for monitoring tasks. "
-            "Use this for: checking pod status, node health, deployments, "
-            "events, and resource usage in the Kubernetes cluster. "
-            "Example: 'Check if all pods are running in the production namespace'"
-        ),
-        agent_card_url=CLUSTER_HEALTH_URL,
-    )
 
     troubleshooter_toolset = ResettableA2AToolset(
         name="ask_troubleshooter_agent",
@@ -95,21 +86,34 @@ def create_coordinator_agent() -> Agent:
         agent_card_url=TROUBLESHOOTER_URL,
     )
 
+    # CrewAI-based cluster health agent (demonstrates A2A interoperability)
+    cluster_health_crew_toolset = ResettableA2AToolset(
+        name="ask_cluster_health_crew",
+        description=(
+            "Delegates to the Cluster Health Crew Agent (CrewAI) for monitoring tasks. "
+            "This is an alternative implementation using CrewAI framework. "
+            "Use this for: checking pod status, node health, deployments, "
+            "events, and resource usage. Same capabilities as cluster_health_agent "
+            "but built with CrewAI to demonstrate A2A protocol interoperability."
+        ),
+        agent_card_url=CLUSTER_HEALTH_CREW_URL,
+    )
+
     return Agent(
         model="gemini-2.5-flash-lite",
         name="sre_coordinator_agent",
         description=(
             "SRE Coordinator that routes requests to specialized Kubernetes agents. "
-            "Can delegate to Cluster Health Agent for monitoring and "
-            "Troubleshooter Agent for debugging issues."
+            "Can delegate to Cluster Health Agent (ADK), Cluster Health Crew (CrewAI), "
+            "and Troubleshooter Agent for debugging issues."
         ),
         instruction="""
 You are an SRE Coordinator Agent. Your role is to understand user requests and
 delegate them to the most appropriate specialized agent.
 
-You have access to two specialized agents via A2A (Agent-to-Agent) protocol:
+You have access to THREE specialized agents via A2A (Agent-to-Agent) protocol:
 
-1. **Cluster Health Agent** (ask_cluster_health_agent):
+1. **Cluster Health Agent** (ask_cluster_health_crew) - Built with CrewAI:
    - Monitors cluster state
    - Checks pod, node, and deployment status
    - Views events and resource usage
@@ -119,7 +123,7 @@ You have access to two specialized agents via A2A (Agent-to-Agent) protocol:
      * "Show me recent events"
      * "What deployments are running?"
 
-2. **Troubleshooter Agent** (ask_troubleshooter_agent):
+2. **Troubleshooter Agent** (ask_troubleshooter_agent) - Built with ADK:
    - Debugs issues and failures
    - Analyzes logs and CrashLoopBackOff
    - Suggests fixes
@@ -130,7 +134,7 @@ You have access to two specialized agents via A2A (Agent-to-Agent) protocol:
      * "Help me fix the CrashLoopBackOff"
 
 **Decision Logic:**
-- If the user asks about STATUS, HEALTH, or general MONITORING -> Cluster Health Agent
+- If the user asks about STATUS, HEALTH, or general MONITORING -> Cluster Health Agent (default)
 - If the user asks about ERRORS, FAILURES, LOGS, or DEBUGGING -> Troubleshooter Agent
 - If unsure, start with Cluster Health to understand the current state
 
@@ -150,8 +154,8 @@ Remember: You are the user's single point of contact. Make the multi-agent
 coordination seamless and provide a unified, helpful response.
 """,
         tools=[
-            cluster_health_toolset,
             troubleshooter_toolset,
+            cluster_health_crew_toolset,
         ],
     )
 

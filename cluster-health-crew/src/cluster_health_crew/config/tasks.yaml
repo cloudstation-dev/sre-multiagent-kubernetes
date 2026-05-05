@@ -1,0 +1,21 @@
+# src/cluster_health_crew/config/tasks.yaml
+health_check_task:
+  description: >
+    Analyze the Kubernetes cluster health based on the user's request:
+
+    {input}
+
+    Use the available tools to gather information about:
+    - Pod status and health
+    - Node conditions and capacity
+    - Deployment replica status
+    - Recent cluster events (especially warnings)
+    - Resource usage patterns
+
+    Provide a clear and concise health report addressing the user's specific request.
+  expected_output: >
+    A comprehensive health status report that directly addresses the user's
+    request. Include relevant metrics, identify any issues or warnings, and
+    provide clear summaries of the cluster state. Format the output in a
+    readable manner with appropriate sections.
+  agent: health_monitor

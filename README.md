@@ -4,9 +4,9 @@ A hands-on workshop to build and deploy a multi-agent SRE system using kagent an
 
 ## Workshop Objectives
 
-- Build 3 specialized AI agents for SRE tasks
+- Build specialized AI agents for SRE tasks using different frameworks
 - Deploy agents to Kubernetes using kagent
-- Demonstrate Agent-to-Agent (A2A) communication
+- Demonstrate Agent-to-Agent (A2A) communication and framework interoperability
 - Interact with agents via the kagent UI
 
 ## Architecture
@@ -18,7 +18,7 @@ A hands-on workshop to build and deploy a multi-agent SRE system using kagent an
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│              SRE Coordinator Agent                      │
+│              SRE Coordinator Agent (ADK)                │
 │  ─────────────────────────────────────────────────────  │
 │  • Receives user requests                               │
 │  • Classifies intent (monitoring vs debugging)          │
@@ -28,25 +28,36 @@ A hands-on workshop to build and deploy a multi-agent SRE system using kagent an
                       │ A2A Protocol
           ┌───────────┴───────────┐
           ▼                       ▼
-┌─────────────────────┐ ┌─────────────────────┐
-│  Cluster Health     │ │   Troubleshooter    │
-│      Agent          │ │       Agent         │
-│ ─────────────────── │ │ ─────────────────── │
-│ • Pod status        │ │ • Log analysis      │
-│ • Node health       │ │ • CrashLoop debug   │
-│ • Deployments       │ │ • Error diagnosis   │
-│ • Events            │ │ • Fix suggestions   │
-│ • Resource usage    │ │ • Connectivity      │
-└─────────────────────┘ └─────────────────────┘
-          │                       │
-          └───────────┬───────────┘
-                      │
-                      ▼
-          ┌─────────────────────┐
-          │   Kubernetes API    │
-          │     (via RBAC)      │
-          └─────────────────────┘
+┌─────────────────┐     ┌─────────────────┐
+│ Cluster Health  │     │ Troubleshooter  │
+│     Crew        │     │     Agent       │
+│   (CrewAI)      │     │     (ADK)       │
+│ ─────────────── │     │ ─────────────── │
+│ • Pod status    │     │ • Log analysis  │
+│ • Node health   │     │ • CrashLoop     │
+│ • Deployments   │     │ • Error diag    │
+│ • Events        │     │ • Fixes         │
+│ • Resources     │     │ • Debugging     │
+└────────┬────────┘     └────────┬────────┘
+         │                       │
+         └───────────┬───────────┘
+                     │
+                     ▼
+         ┌─────────────────────┐
+         │   Kubernetes API    │
+         │     (via RBAC)      │
+         └─────────────────────┘
 ```
+
+### A2A Protocol Interoperability
+
+This workshop demonstrates that the A2A protocol enables communication between agents regardless of their implementation framework:
+
+- **Cluster Health Crew**: Built with kagent-crewai (CrewAI)
+- **Troubleshooter Agent**: Built with kagent-adk (Google ADK)
+- **SRE Coordinator**: Built with kagent-adk (Google ADK) - orchestrates the other agents
+
+The SRE Coordinator can seamlessly communicate with both specialized agents using the same A2A protocol, demonstrating true framework interoperability between CrewAI and Google ADK implementations.
 
 ## Prerequisites
 
@@ -103,23 +114,23 @@ What is kagent-adk? It is the 'Agent Development Kit.' It is designed to facilit
 
 Navigate to the `sre-agents` directory and build each agent:
 
-### 3.1 Cluster Health Agent
+### 4.1 Troubleshooter Agent
 
 ```bash
-cd cluster-health
-docker build -t <your-registry>/cluster-health-agent:v1 .
-docker push <your-registry>/cluster-health-agent:v1
-```
-
-### 3.2 Troubleshooter Agent
-
-```bash
-cd ../troubleshooter
+cd troubleshooter
 docker build -t <your-registry>/troubleshooter-agent:v1 .
 docker push <your-registry>/troubleshooter-agent:v1
 ```
 
-### 3.3 SRE Coordinator
+### 4.2 Cluster Health Crew (CrewAI)
+
+```bash
+cd ../cluster-health-crew
+docker build -t <your-registry>/cluster-health-crew:v1 .
+docker push <your-registry>/cluster-health-crew:v1
+```
+
+### 4.3 SRE Coordinator
 
 ```bash
 cd ../coordinator
@@ -129,24 +140,24 @@ docker push <your-registry>/sre-coordinator:v1
 
 ---
 
-## Step 4: Configure the Deployment
+## Step 5: Configure the Deployment
 
 Edit `deploy-all.yaml` and replace the image references with your registry:
 
 ```yaml
-# Line ~62: Cluster Health Agent
-image: <your-registry>/cluster-health-agent:v1
-
-# Line ~116: Troubleshooter Agent
+# Troubleshooter Agent (ADK)
 image: <your-registry>/troubleshooter-agent:v1
 
-# Line ~139: SRE Coordinator
+# Cluster Health Crew (CrewAI)
+image: <your-registry>/cluster-health-crew:v1
+
+# SRE Coordinator
 image: <your-registry>/sre-coordinator:v1
 ```
 
 ---
 
-## Step 5: Deploy the Agents
+## Step 6: Deploy the Agents
 
 ```bash
 kubectl apply -f deploy-all.yaml
@@ -159,7 +170,7 @@ This will create:
 
 ---
 
-## Step 6: Verify the Deployment
+## Step 7: Verify the Deployment
 
 ### Check the agents are registered
 
@@ -169,21 +180,21 @@ kubectl get agents -n kagent
 
 Expected output:
 ```
-NAME                   AGE
-cluster-health-agent   1m
-troubleshooter-agent   1m
-sre-coordinator        1m
+NAME                    AGE
+cluster-health-crew     1m
+troubleshooter-agent    1m
+sre-coordinator         1m
 ```
 
 ### Check the pods are running
 
 ```bash
-kubectl get pods -n kagent | grep -E "(cluster-health|troubleshooter|coordinator)"
+kubectl get pods -n kagent | grep -E "(cluster-health-crew|troubleshooter|coordinator)"
 ```
 
 Expected output:
 ```
-cluster-health-agent-xxxxx   1/1     Running   0   1m
+cluster-health-crew-xxxxx    1/1     Running   0   1m
 troubleshooter-agent-xxxxx   1/1     Running   0   1m
 sre-coordinator-xxxxx        1/1     Running   0   1m
 ```
@@ -191,12 +202,12 @@ sre-coordinator-xxxxx        1/1     Running   0   1m
 ### Check the services exist
 
 ```bash
-kubectl get svc -n kagent | grep -E "(cluster-health|troubleshooter|coordinator)"
+kubectl get svc -n kagent | grep -E "(cluster-health-crew|troubleshooter|coordinator)"
 ```
 
 ---
 
-## Step 7: Access the Kagent UI
+## Step 8: Access the Kagent UI
 
 Start port-forwarding to the kagent UI:
 
@@ -208,12 +219,12 @@ Open your browser and navigate to: **http://localhost:3000**
 
 ---
 
-## Step 8: Test the Agents
+## Step 9: Test the Agents
 
 ### Option A: Direct Agent Access (Recommended for testing)
 
 1. Open http://localhost:3000
-2. Select **cluster-health-agent** from the agent list
+2. Select **cluster-health-crew** from the agent list
 3. Send a message: `What pods are running in the kagent namespace?`
 4. The agent will query the Kubernetes API and respond
 
@@ -223,7 +234,7 @@ Open your browser and navigate to: **http://localhost:3000**
 2. Ask: `Is my cluster healthy?`
 3. The coordinator will:
    - Analyze your request
-   - Delegate to the Cluster Health Agent via A2A
+   - Delegate to the Cluster Health Crew via A2A
    - Return a unified response
 
 ### Option C: Troubleshooting Flow
@@ -232,35 +243,48 @@ Open your browser and navigate to: **http://localhost:3000**
 2. Ask: `Why are pods failing in the default namespace?`
 3. The coordinator will delegate to the Troubleshooter Agent
 
+### Option D: Framework Interoperability via Coordinator
+
+1. Select **sre-coordinator**
+2. Ask: `Check cluster health and troubleshoot any failing pods`
+3. The coordinator will:
+   - Delegate to Cluster Health Crew (CrewAI) for monitoring
+   - Delegate to Troubleshooter Agent (ADK) for debugging
+   - This demonstrates agents built with different frameworks communicating via A2A
+
 ---
 
 ## Example Prompts
 
 | Agent | Example Prompts |
 |-------|-----------------|
-| **Cluster Health** | "Show me all pods in kube-system namespace" |
-| **Cluster Health** | "Are all nodes healthy?" |
-| **Cluster Health** | "What deployments are running?" |
-| **Cluster Health** | "Show me recent warning events" |
+| **Cluster Health Crew (CrewAI)** | "Show me all pods in kube-system namespace" |
+| **Cluster Health Crew (CrewAI)** | "Are all nodes healthy?" |
+| **Cluster Health Crew (CrewAI)** | "What deployments are running?" |
+| **Cluster Health Crew (CrewAI)** | "Show me recent warning events" |
+| **Cluster Health Crew (CrewAI)** | "Check pod status in kagent namespace" |
+| **Cluster Health Crew (CrewAI)** | "Give me a health report for all nodes" |
 | **Troubleshooter** | "Why is pod nginx-xxx crashing?" |
 | **Troubleshooter** | "Show me logs from pod my-app" |
 | **Troubleshooter** | "Find all failing pods" |
 | **Troubleshooter** | "Analyze the CrashLoopBackOff for pod X" |
 | **Coordinator** | "Check my cluster health and report any issues" |
 | **Coordinator** | "Debug the failing pods in production namespace" |
+| **Coordinator** | "Check cluster health and troubleshoot any problems" |
+| **Coordinator** | "Is everything running correctly in the kagent namespace?" |
 
 ---
 
 ## Agent Tools Reference
 
-### Cluster Health Agent
+### Cluster Health Crew (CrewAI)
 
 | Tool | Description |
 |------|-------------|
 | `get_pods(namespace)` | List pods and their status |
 | `get_nodes()` | Get node status and capacity |
 | `get_deployments(namespace)` | List deployments and replica status |
-| `get_events(namespace)` | Recent cluster events |
+| `get_events(namespace, limit)` | Recent cluster events |
 | `get_resource_usage(namespace)` | Resource requests/limits summary |
 
 ### Troubleshooter Agent
@@ -282,19 +306,19 @@ Open your browser and navigate to: **http://localhost:3000**
 
 Check the pod logs:
 ```bash
-kubectl logs -n kagent -l app.kubernetes.io/name=cluster-health-agent
+kubectl logs -n kagent -l app.kubernetes.io/name=cluster-health-crew
 ```
 
 Check pod events:
 ```bash
-kubectl describe pod -n kagent -l app.kubernetes.io/name=cluster-health-agent
+kubectl describe pod -n kagent -l app.kubernetes.io/name=cluster-health-crew
 ```
 
 ### RBAC permission errors
 
 Verify the ServiceAccount has correct permissions:
 ```bash
-kubectl auth can-i list pods --as=system:serviceaccount:kagent:cluster-health-agent-sa
+kubectl auth can-i list pods --as=system:serviceaccount:kagent:cluster-health-crew-sa
 ```
 
 ### Model 503 errors
@@ -305,13 +329,13 @@ The Gemini model is experiencing high demand. Wait a few minutes and try again.
 
 Verify the agent services exist and are accessible:
 ```bash
-kubectl get svc -n kagent | grep -E "(cluster-health|troubleshooter)"
+kubectl get svc -n kagent | grep -E "(cluster-health-crew|troubleshooter)"
 ```
 
 Test connectivity from coordinator:
 ```bash
 kubectl exec -n kagent deploy/sre-coordinator -- \
-  curl -s http://cluster-health-agent.kagent:8080/.well-known/agent-card.json
+  curl -s http://cluster-health-crew.kagent:8080/.well-known/agent-card.json
 ```
 
 ---
@@ -320,7 +344,7 @@ kubectl exec -n kagent deploy/sre-coordinator -- \
 
 | Agent | Resources | Verbs |
 |-------|-----------|-------|
-| Cluster Health | pods, nodes, events, services, deployments | get, list, watch |
+| Cluster Health Crew (CrewAI) | pods, nodes, events, services, deployments | get, list, watch |
 | Troubleshooter | pods, pods/log, events, services | get, list, watch |
 | Coordinator | None (HTTP only to other agents) | - |
 
@@ -329,6 +353,10 @@ kubectl exec -n kagent deploy/sre-coordinator -- \
 ## Cleanup
 
 To remove all deployed resources:
+
+```bash
+kind delete cluster --name <cluster>
+```
 
 ```bash
 # Delete the agents and RBAC
@@ -342,10 +370,12 @@ kubectl delete secret kagent-google -n kagent
 
 ## What You Learned
 
-- How to build custom agents with kagent-adk
+- How to build custom agents with different frameworks (kagent-adk and kagent-crewai)
 - How to deploy BYO (Bring Your Own) agents to Kubernetes
 - How the A2A protocol enables agent-to-agent communication
-- How to use RBAC to give agents Kubernetes API access
+- **A2A framework interoperability**: CrewAI and Google ADK agents can communicate seamlessly via the A2A protocol
+- How to orchestrate multiple specialized agents with a coordinator agent
+- How to use RBAC to give agents secure Kubernetes API access
 - How to interact with agents via the kagent UI
 
 ---
