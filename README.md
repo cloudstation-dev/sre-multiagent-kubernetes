@@ -61,7 +61,7 @@ The SRE Coordinator can seamlessly communicate with both specialized agents usin
 
 ## Prerequisites
 
-- [ ] Kubernetes cluster with kagent installed
+- [ ] Kubernetes cluster. You can use cloud cluster, kind or docker desktop.
 - [ ] Install ghcr.io/kagent-dev/kagent/kagent-adk:0.9.0-beta3
 - [ ] Docker to build images
 - [ ] kubectl configured for your cluster
@@ -70,6 +70,8 @@ The SRE Coordinator can seamlessly communicate with both specialized agents usin
 ---
 
 ## Step 1 - Setup a k8s cluster using kind
+
+Install `kind` https://kind.sigs.k8s.io/docs/user/quick-start/
 
 You need to have installed kind tool. 
 
@@ -363,7 +365,7 @@ kind delete cluster --name <cluster>
 kubectl delete -f deploy-all.yaml
 
 # Delete the API key secret
-kubectl delete secret kagent-google -n kagent
+kubectl delete secret kagent-gemini -n kagent
 ```
 
 ---

@@ -6,7 +6,7 @@
 # Prerequisites:
 # 1. kagent is installed in the cluster
 # 2. Create the Google API key secret:
-#    kubectl create secret generic kagent-google \
+#    kubectl create secret generic kagent-gemini \
 #      --from-literal=GOOGLE_API_KEY=your-key \
 #      -n kagent
 #
@@ -64,7 +64,7 @@ spec:
         - name: GOOGLE_API_KEY
           valueFrom:
             secretKeyRef:
-              name: kagent-google
+              name: kagent-gemini
               key: GOOGLE_API_KEY
 
 # -----------------------------------------------------------------------------
@@ -118,7 +118,7 @@ spec:
         - name: GEMINI_API_KEY
           valueFrom:
             secretKeyRef:
-              name: kagent-google
+              name: kagent-gemini
               key: GOOGLE_API_KEY
 
 # -----------------------------------------------------------------------------
@@ -140,7 +140,7 @@ spec:
         - name: GOOGLE_API_KEY
           valueFrom:
             secretKeyRef:
-              name: kagent-google
+              name: kagent-gemini
               key: GOOGLE_API_KEY
         - name: TROUBLESHOOTER_AGENT_URL
           value: "http://troubleshooter-agent.kagent:8080/.well-known/agent-card.json"

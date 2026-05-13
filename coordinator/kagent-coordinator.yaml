@@ -19,7 +19,7 @@ spec:
         - name: GOOGLE_API_KEY
           valueFrom:
             secretKeyRef:
-              name: kagent-google
+              name: kagent-gemini
               key: GOOGLE_API_KEY
         # A2A agent URLs - these point to the other agents' services
         - name: CLUSTER_HEALTH_AGENT_URL
