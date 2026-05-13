@@ -223,14 +223,32 @@ Open your browser and navigate to: **http://localhost:3000**
 
 ## Step 9: Test the Agents
 
-### Option A: Direct Agent Access (Recommended for testing)
+### Option A: Create a wrong pod
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-error-imagen
+  labels:
+    app: web-failing
+spec:
+  containers:
+  - name: nginx-container
+    # Esta imagen no existe en Docker Hub
+    image: nginx:versiooon-inexistente-123
+    ports:
+    - containerPort: 80
+
+```
+### Option B: Direct Agent Access (Recommended for testing)
 
 1. Open http://localhost:3000
 2. Select **cluster-health-crew** from the agent list
 3. Send a message: `What pods are running in the kagent namespace?`
 4. The agent will query the Kubernetes API and respond
 
-### Option B: Via the Coordinator (A2A demonstration)
+### Option C: Via the Coordinator (A2A demonstration)
 
 1. Select **sre-coordinator** from the agent list
 2. Ask: `Is my cluster healthy?`
@@ -239,13 +257,13 @@ Open your browser and navigate to: **http://localhost:3000**
    - Delegate to the Cluster Health Crew via A2A
    - Return a unified response
 
-### Option C: Troubleshooting Flow
+### Option D: Troubleshooting Flow
 
 1. Select **sre-coordinator**
 2. Ask: `Why are pods failing in the default namespace?`
 3. The coordinator will delegate to the Troubleshooter Agent
 
-### Option D: Framework Interoperability via Coordinator
+### Option E: Framework Interoperability via Coordinator
 
 1. Select **sre-coordinator**
 2. Ask: `Check cluster health and troubleshoot any failing pods`
